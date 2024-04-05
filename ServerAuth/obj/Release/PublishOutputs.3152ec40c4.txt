@@ -1,0 +1,4 @@
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/publish/modinfo.json
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/publish/ServerAuth.dll
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/publish/ServerAuth.deps.json
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/publish/ServerAuth.pdb

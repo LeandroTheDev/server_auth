@@ -1,0 +1,13 @@
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/modinfo.json
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/ServerAuth.deps.json
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/ServerAuth.dll
+/home/bobs/User/Templates/ServerAuth/ServerAuth/bin/Release/Mods/mod/ServerAuth.pdb
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.csproj.AssemblyReference.cache
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.GeneratedMSBuildEditorConfig.editorconfig
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.AssemblyInfoInputs.cache
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.AssemblyInfo.cs
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.csproj.CoreCompileInputs.cache
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.dll
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/refint/ServerAuth.dll
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ServerAuth.pdb
+/home/bobs/User/Templates/ServerAuth/ServerAuth/obj/Release/ref/ServerAuth.dll
