@@ -203,7 +203,6 @@ public class Initialization : ModSystem
                 // Check if is the same
                 if (player.PlayerName == freezeName)
                 {
-                    Debug.Log($"{freezePlayers[freezeName].X} {freezePlayers[freezeName].Y} {freezePlayers[freezeName].Z}");
                     // Reset Position
                     player.Entity.TeleportToDouble(
                         freezePlayers[freezeName].X,

@@ -6,7 +6,10 @@
         "BoboDev"
     ],
     "description": "Authentication system for servers",
-    "version": "1.0.0",
+    "version": "1.0.1",
+    "side": "server",
+    "requiredOnClient": false,
+    "requiredOnServer": true,
     "dependencies": {
         "game": ""
     }
