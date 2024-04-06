@@ -48,6 +48,11 @@ Performance can be a impacted on the server, because of authentication verificat
 
 https://github.com/LeandroTheDev/server_auth/assets/106118473/58a9501c-2da2-494f-84cc-0af1da27bce3
 
+https://github.com/LeandroTheDev/server_auth/assets/106118473/2e39be0e-544a-4a5d-957e-615a8ea784bb
+
+
+
+
 ### Building
 Learn more about vintage story modding in [Linux](https://github.com/LeandroTheDev/arch_linux/wiki/Games#vintage-story-modding) or [Windows](https://wiki.vintagestory.at/index.php/Modding:Setting_up_your_Development_Environment)
 
