@@ -3,9 +3,9 @@
     "modid": "serverauth",
     "name": "ServerAuth",
     "authors": [
-        "Unknown"
+        "BoboDev"
     ],
-    "description": "To be added",
+    "description": "Authentication system for servers",
     "version": "1.0.0",
     "dependencies": {
         "game": ""
