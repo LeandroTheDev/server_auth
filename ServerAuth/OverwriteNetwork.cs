@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Threading.Tasks;
 using HarmonyLib;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.Common;
 using Vintagestory.GameContent;
-using Vintagestory.Server;
 
 namespace ServerAuth;
 
@@ -52,6 +53,7 @@ public class OverwriteNetwork
         }
         else return true;
     }
+
     // Overwrite the block place system
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Block), "CanPlaceBlock")]
@@ -67,14 +69,28 @@ public class OverwriteNetwork
     }
 
     // Overwrite the block break system
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(Block), "OnGettingBroken")]
-    public static float OnGettingBroken(float __result, IPlayer player, BlockSelection blockSel, ItemSlot itemslot, float remainingResistance, float dt, int counter)
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(Block), "OnBlockBroken")]
+    public static bool OnBlockBroken(Block __instance, IWorldAccessor world, BlockPos pos, IPlayer byPlayer, float dropQuantityMultiplier = 1f)
     {
         // If player is unlogged cannot break blocks
-        if (Initialization.unloggedPlayers.TryGetValue(player.PlayerName, out _)) return 100f;
-        else return __result;
+        if (Initialization.unloggedPlayers.TryGetValue(byPlayer.PlayerName, out _))
+        {
+            IServerPlayer player = byPlayer as IServerPlayer;
+            // This will replace the block the player breaked,
+            // in general the block will not be breaked for the server, but the player client can still
+            // pass the block hes breaked after login, so we need to replace the block
+            // if hes breaked so he cannot pass
+            Task.Delay(100).ContinueWith((_) =>
+            {
+                Debug.Log($"{byPlayer.PlayerName} tried to break a block in {pos.X} {pos.Y} {pos.Z} but hes is not logged");
+                __instance.DoPlaceBlock(world, player, new BlockSelection(pos, BlockFacing.SOUTH, __instance), new ItemStack(__instance, 1));
+            });
+            return false;
+        }
+        else return true;
     }
+
 
     // Overwrite the spear throw
     [HarmonyPrefix]
@@ -111,6 +127,7 @@ public class OverwriteNetwork
     [HarmonyPatch(typeof(Entity), "ReceiveDamage")]
     public static bool ReceiveDamage(Entity __instance, DamageSource damageSource, float damage)
     {
+        // Get damage sources
         EntityPlayer player;
         if (damageSource.GetCauseEntity() is EntityPlayer) player = damageSource.GetCauseEntity() as EntityPlayer;
         else if (damageSource.SourceEntity is EntityPlayer) player = damageSource.SourceEntity as EntityPlayer;
@@ -124,15 +141,15 @@ public class OverwriteNetwork
         else return true;
     }
 
-    // Overwrite the durability
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(CollectibleObject), "DamageItem")]
-    public static bool DamageItem(CollectibleObject __instance, IWorldAccessor world, Entity byEntity, ItemSlot itemslot, int amount = 1)
-    {
-        // If player is unlogged cannot lose item durability
-        if (Initialization.unloggedPlayers.TryGetValue(byEntity.GetName(), out _)) return false;
-        else return true;
-    }
+    // // Overwrite the durability not necessary because player inventory now is cleared
+    // [HarmonyPrefix]
+    // [HarmonyPatch(typeof(CollectibleObject), "DamageItem")]
+    // public static bool DamageItem(CollectibleObject __instance, IWorldAccessor world, Entity byEntity, ItemSlot itemslot, int amount = 1)
+    // {
+    //     // If player is unlogged cannot lose item durability
+    //     if (Initialization.unloggedPlayers.TryGetValue(byEntity.GetName(), out _)) return false;
+    //     else return true;
+    // }
 
     // Overwrite the saturation
     [HarmonyPrefix]

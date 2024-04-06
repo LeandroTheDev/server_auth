@@ -4,11 +4,14 @@ Increase the security for your server by adding a new account register and login
 Features:
 - Register account system ex: /register 123
 - Login account system ex: /login 123
-- Player unlogged cannot:
+
+Player unlogged cannot:
 - Drop items
 - Execute commands
 - Break blocks
 - Place blocks
+- Get dropped items
+- Use inventory
 - Throw items
 - Deal damage
 - Receive damage
@@ -18,18 +21,21 @@ Features:
 ### Observations
 Players not registered will not count as unlogged player.
 
-Players has 25 seconds to login, if not will be automatically disconnected from the server.
+Players has 25 seconds to login, generally this is smaller because of time to enter in the world, if player not logged will be automatically disconnected from the server.
 
 Too many wrongs password will kick user and ban for some seconds.
 
-Entering too many times in server and not logging will ban the user for some seconds
+Entering too many times in server and not logging will ban the user for some seconds.
 
-Unfurtunally you can view the players password in servers log, this is because the native code logs all commands from players, you know how to disable it? feel free to pull request.
+When a player enters in the server all the inventory is saved locally and the player inventory is clear, so
+the unlogged players will not have access to the inventory, when the player successfully login in, the inventory is restored.
+
+Unfurtunally you can view the players password in servers log if you have acess to it, this is because the native code logs all commands from players, you know how to disable it? feel free to pull request.
 
 ### Considerations
-This mod change a lot of native code, and can break easily throught updates.
+This mod change a lot of native code, and can break easily throught updates, please make a backup in your world before adding it.
 
-Performance can be a little less on the server, because of authentication verification.
+Performance can be a impacted on the server, because of authentication verification.
 
 ### Register
 ![image](https://github.com/LeandroTheDev/server_auth/assets/106118473/0091d753-6329-4d6a-b871-bbb3ef8f3a36) 

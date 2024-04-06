@@ -1,12 +1,12 @@
 {
     "type": "code",
     "modid": "serverauth",
-    "name": "ServerAuth",
+    "name": "Server Auth",
     "authors": [
         "BoboDev"
     ],
     "description": "Authentication system for servers",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "side": "server",
     "requiredOnClient": false,
     "requiredOnServer": true,

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using HarmonyLib;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
+using Vintagestory.Common;
 
 namespace ServerAuth;
 
@@ -78,6 +81,109 @@ public class Initialization : ModSystem
 
     private void PlayerDisconnect(IServerPlayer player)
     {
+        #region restore_inventory
+        if (freezePlayers.TryGetValue(player.PlayerName, out _))
+        {
+            foreach (IInventory playerInventory in player.InventoryManager.Inventories.Values)
+            {
+                // Get inventory type
+                string inventoryType = playerInventory.GetType().ToString();
+
+                // Stores all items inventory into player freeze variable
+                if (inventoryType.Contains("InventoryPlayerCreative")) continue;
+                else if (inventoryType.Contains("InventoryPlayerHotbar"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].hotbar[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerBackPacks"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].backpack[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerGround"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].ground[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerMouseCursor"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].mouse[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryCraftingGrid"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].crafting[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryCharacter"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].character[index];
+                        index++;
+                    }
+                }
+            }
+        }
+        #endregion
         unloggedPlayers.Remove(player.PlayerName);
         freezePlayers.Remove(player.PlayerName);
     }
@@ -100,7 +206,136 @@ public class Initialization : ModSystem
         // Check if player is already registered, if yes ask for login
         if (savedPasswords.TryGetValue(player.PlayerName, out _))
         {
+            // Create a new instance of freeze player
             freezePlayers[player.PlayerName] = new PlayerFreeze(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
+            // Swipe all inventory that player has
+            foreach (IInventory playerInventory in player.InventoryManager.Inventories.Values)
+            {
+                // Get inventory type
+                string inventoryType = playerInventory.GetType().ToString();
+                // Stores all items inventory into player freeze variable
+                if (inventoryType.Contains("InventoryPlayerCreative")) continue;
+                else if (inventoryType.Contains("InventoryPlayerHotbar"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // Check if slot contains item
+                        if (item.Itemstack == null)
+                        {
+                            freezePlayers[player.PlayerName].hotbar.Add(index, null);
+                            index++;
+                            continue;
+                        }
+                        // Getting the item from hotbar and cloning into freeze player
+                        freezePlayers[player.PlayerName].hotbar.Add(index, item.Itemstack.Clone());
+                        index++;
+
+                        // Remove the item from player inventory
+                        item.Itemstack = null;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerBackPacks"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // Check if slot contains item
+                        if (item.Itemstack == null)
+                        {
+                            freezePlayers[player.PlayerName].backpack.Add(index, null);
+                            index++;
+                            continue;
+                        }
+                        // Getting the item from backpack and cloning into freeze player
+                        freezePlayers[player.PlayerName].backpack.Add(index, item.Itemstack.Clone());
+                        index++;
+
+                        // Remove the item from player inventory
+                        item.Itemstack = null;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerGround"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // Check if slot contains item
+                        if (item.Itemstack == null)
+                        {
+                            freezePlayers[player.PlayerName].ground.Add(index, null);
+                            index++;
+                            continue;
+                        }
+                        // Getting the item from ground and cloning into freeze player
+                        freezePlayers[player.PlayerName].ground.Add(index, item.Itemstack.Clone());
+                        index++;
+
+                        // Remove the item from player inventory
+                        item.Itemstack = null;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerMouseCursor"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // Check if slot contains item
+                        if (item.Itemstack == null)
+                        {
+                            freezePlayers[player.PlayerName].mouse.Add(index, null);
+                            index++;
+                            continue;
+                        }
+                        // Getting the item from mouse and cloning into freeze player
+                        freezePlayers[player.PlayerName].mouse.Add(index, item.Itemstack.Clone());
+                        index++;
+
+                        // Remove the item from player inventory
+                        item.Itemstack = null;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryCraftingGrid"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // Check if slot contains item
+                        if (item.Itemstack == null)
+                        {
+                            freezePlayers[player.PlayerName].crafting.Add(index, null);
+                            index++;
+                            continue;
+                        }
+                        // Getting the item from crafting and cloning into freeze player
+                        freezePlayers[player.PlayerName].crafting.Add(index, item.Itemstack.Clone());
+                        index++;
+
+                        // Remove the item from player inventory
+                        item.Itemstack = null;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryCharacter"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // Check if slot contains item
+                        if (item.Itemstack == null)
+                        {
+                            freezePlayers[player.PlayerName].character.Add(index, null);
+                            index++;
+                            continue;
+                        }
+                        // Getting the item from character and cloning into freeze player
+                        freezePlayers[player.PlayerName].character.Add(index, item.Itemstack.Clone());
+                        index++;
+
+                        // Remove the item from player inventory
+                        item.Itemstack = null;
+                    }
+                }
+            }
             player.SendMessage(0, "To continue please login: /login password", EnumChatType.Notification);
         }
         // If not ask for register
@@ -130,37 +365,142 @@ public class Initialization : ModSystem
 
     private TextCommandResult LoginPlayer(TextCommandCallingArgs args)
     {
-        if (!unloggedPlayers.TryGetValue(args.Caller.Player.PlayerName, out _)) return TextCommandResult.Success("You are already logged", "0");
+        IServerPlayer player = args.Caller.Player as IServerPlayer;
+        #region password_check
+        if (!unloggedPlayers.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("You are already logged", "0");
         // Check if the password argument is valid
         if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type a password", "0");
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
         // Check if player is not registered
-        if (!savedPasswords.TryGetValue(args.Caller.Player.PlayerName, out _)) return TextCommandResult.Success("This account is not registered yet, register using /register password", "2");
+        if (!savedPasswords.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("This account is not registered yet, register using /register password", "2");
         // Password check
-        if (!(args[0] as string == savedPasswords[args.Caller.Player.PlayerName]))
+        if (!(args[0] as string == savedPasswords[player.PlayerName]))
         {
-            Debug.Log($"{args.Caller.Player.PlayerName} typed wrong password");
-            if (args.Caller.Player is IServerPlayer)
-            {
-                IServerPlayer serverPlayer = args.Caller.Player as IServerPlayer;
+            Debug.Log($"{player.PlayerName} typed wrong password");
 
-                // Increment timeout
-                if (!timeoutPlayers.TryGetValue(serverPlayer.PlayerName, out _)) timeoutPlayers[serverPlayer.PlayerName] = 0;
-                timeoutPlayers[serverPlayer.PlayerName] += 1;
+            // Increment timeout
+            if (!timeoutPlayers.TryGetValue(player.PlayerName, out _)) timeoutPlayers[player.PlayerName] = 0;
+            timeoutPlayers[player.PlayerName] += 1;
 
-                // Disconnect the player if timeout exceed
-                if (timeoutPlayers[serverPlayer.PlayerName] >= 5) serverPlayer.Disconnect("Too many attempts");
-            }
+            // Disconnect the player if timeout exceed
+            if (timeoutPlayers[player.PlayerName] >= 5) player.Disconnect("Too many attempts");
             return TextCommandResult.Success("Invalid password", "3");
         };
+        #endregion
 
+        #region restore_inventory
+        foreach (IInventory playerInventory in player.InventoryManager.Inventories.Values)
+        {
+            // Get inventory type
+            string inventoryType = playerInventory.GetType().ToString();
+
+            // Stores all items inventory into player freeze variable
+            if (inventoryType.Contains("InventoryPlayerCreative")) continue;
+            else if (inventoryType.Contains("InventoryPlayerHotbar"))
+            {
+                int index = 0;
+                foreach (ItemSlot item in playerInventory)
+                {
+                    // If not found alert the server the item has been corrupted
+                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    {
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        continue;
+                    }
+                    item.Itemstack = freezePlayers[player.PlayerName].hotbar[index];
+                    index++;
+                }
+            }
+            else if (inventoryType.Contains("InventoryPlayerBackPacks"))
+            {
+                int index = 0;
+                foreach (ItemSlot item in playerInventory)
+                {
+                    // If not found alert the server the item has been corrupted
+                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    {
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        continue;
+                    }
+                    item.Itemstack = freezePlayers[player.PlayerName].backpack[index];
+                    index++;
+                }
+            }
+            else if (inventoryType.Contains("InventoryPlayerGround"))
+            {
+                int index = 0;
+                foreach (ItemSlot item in playerInventory)
+                {
+                    // If not found alert the server the item has been corrupted
+                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    {
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        continue;
+                    }
+                    item.Itemstack = freezePlayers[player.PlayerName].ground[index];
+                    index++;
+                }
+            }
+            else if (inventoryType.Contains("InventoryPlayerMouseCursor"))
+            {
+                int index = 0;
+                foreach (ItemSlot item in playerInventory)
+                {
+                    // If not found alert the server the item has been corrupted
+                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    {
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        continue;
+                    }
+                    item.Itemstack = freezePlayers[player.PlayerName].mouse[index];
+                    index++;
+                }
+            }
+            else if (inventoryType.Contains("InventoryCraftingGrid"))
+            {
+                int index = 0;
+                foreach (ItemSlot item in playerInventory)
+                {
+                    // If not found alert the server the item has been corrupted
+                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    {
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        continue;
+                    }
+                    item.Itemstack = freezePlayers[player.PlayerName].crafting[index];
+                    index++;
+                }
+            }
+            else if (inventoryType.Contains("InventoryCharacter"))
+            {
+                int index = 0;
+                foreach (ItemSlot item in playerInventory)
+                {
+                    // If not found alert the server the item has been corrupted
+                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    {
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        continue;
+                    }
+                    item.Itemstack = freezePlayers[player.PlayerName].character[index];
+                    index++;
+                }
+            }
+        }
+        #endregion
+
+        #region cleaning
         // Remove it from unlogged players
         unloggedPlayers.Remove(args.Caller.Player.PlayerName);
         freezePlayers.Remove(args.Caller.Player.PlayerName);
 
+        // Notify player the changes
+        player.BroadcastPlayerData(true);
+
         Debug.Log($"{args.Caller.Player.PlayerName} logged into server");
         return TextCommandResult.Success("Successfully logged");
+        #endregion
     }
 
     private Dictionary<string, string> GetSavedPasswords()
