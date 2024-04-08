@@ -4,6 +4,8 @@ Increase the security for your server by adding a new account register and login
 Features:
 - Register account system ex: /register 123
 - Login account system ex: /login 123
+- Change password system ex: /changepassword 321
+- Admin change password system ex: /forcechangepassword test 321
 
 Player unlogged cannot:
 - Drop items
@@ -21,7 +23,7 @@ Player unlogged cannot:
 ### Observations
 Players not registered will not count as unlogged player.
 
-Players has 25 seconds to login, generally this is smaller because of time to enter in the world, if player not logged will be automatically disconnected from the server.
+Players has 20 seconds to login, if player not logged will be automatically disconnected from the server.
 
 Too many wrongs password will kick user and ban for some seconds.
 
@@ -36,6 +38,8 @@ Unfurtunally you can view the players password in servers log if you have acess 
 This mod change a lot of native code, and can break easily throught updates, please make a backup in your world before adding it.
 
 Performance can be a impacted on the server, because of authentication verification.
+
+To much unlogged players can cause performances leaks because of forcing stop moviment.
 
 ### Register
 ![image](https://github.com/LeandroTheDev/server_auth/assets/106118473/0091d753-6329-4d6a-b871-bbb3ef8f3a36) 
@@ -55,6 +59,8 @@ https://github.com/LeandroTheDev/server_auth/assets/106118473/2e39be0e-544a-4a5d
 
 ### Building
 Learn more about vintage story modding in [Linux](https://github.com/LeandroTheDev/arch_linux/wiki/Games#vintage-story-modding) or [Windows](https://wiki.vintagestory.at/index.php/Modding:Setting_up_your_Development_Environment)
+
+Create a template with name ServerAuth, and paste all contents from this project in there
 
 > Linux
 

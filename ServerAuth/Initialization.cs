@@ -1,23 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using HarmonyLib;
 using Vintagestory.API.Common;
-using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
-using Vintagestory.Common;
 
 namespace ServerAuth;
 
 public class Initialization : ModSystem
 {
     ICoreServerAPI api;
-#pragma warning disable CA2211
-    public static Dictionary<string, IServerPlayer> unloggedPlayers = [];
-#pragma warning restore CA2211
+    public Dictionary<string, IServerPlayer> unloggedPlayers = [];
     private readonly Dictionary<string, int> timeoutPlayers = [];
     private readonly Dictionary<string, PlayerFreeze> freezePlayers = [];
 
@@ -29,7 +23,7 @@ public class Initialization : ModSystem
         // Create register command
         api.ChatCommands.Create("register")
         // Description
-        .WithDescription("Register the account name to the server")
+        .WithDescription("Register the account to the server")
         // Chat privilege
         .RequiresPrivilege(Privilege.chat)
         // Only if is a valid player
@@ -38,6 +32,8 @@ public class Initialization : ModSystem
         .WithArgs(new StringArgParser("password", false))
         // Function Handle
         .HandleWith(RegisterPlayer);
+
+        Debug.Log("Register command registered");
 
         // Create login command
         api.ChatCommands.Create("login")
@@ -52,11 +48,40 @@ public class Initialization : ModSystem
         // Function Handle
         .HandleWith(LoginPlayer);
 
-        Debug.Log("Commands registered");
+        Debug.Log("Login command registered");
+
+        // Create change password command
+        api.ChatCommands.Create("changepassword")
+        // Description
+        .WithDescription("Change the password of account authentication")
+        // Chat privilege
+        .RequiresPrivilege(Privilege.chat)
+        // Only if is a valid player
+        .RequiresPlayer()
+        // Need a argument called password
+        .WithArgs(new StringArgParser("password", false))
+        // Function Handle
+        .HandleWith(ChangePassword);
+
+        Debug.Log("Change password command registered");
+
+        // Create admin change password command
+        api.ChatCommands.Create("forcechangepassword")
+        // Description
+        .WithDescription("Admin command to change password from a player")
+        // Chat privilege
+        .RequiresPrivilege(Privilege.root)
+        // Need a argument called password
+        .WithArgs(new StringArgParser("player", false), new StringArgParser("password", false))
+        // Function Handle
+        .HandleWith(AdminChangePassword);
+
+        Debug.Log("Admin change password command registered");
 
         api.Event.PlayerJoin += PlayerJoin;
         api.Event.PlayerDisconnect += PlayerDisconnect;
-        api.Event.RegisterGameTickListener(ReduceTimeoutPenalty, 10000);
+        api.Event.PlayerNowPlaying += PlayerReady;
+        api.Event.RegisterGameTickListener(ReduceTimeoutPenalty, 60000);
         api.Event.RegisterGameTickListener(FreezeUnloggedPlayers, 100);
 
         Debug.Log("Connections events registered");
@@ -65,7 +90,7 @@ public class Initialization : ModSystem
     public override void Start(ICoreAPI api)
     {
         base.Start(api);
-        overwriteNetwork.OverwriteNativeFunctions();
+        overwriteNetwork.OverwriteNativeFunctions(this);
     }
 
     public override void Dispose()
@@ -79,6 +104,12 @@ public class Initialization : ModSystem
         return forSide == EnumAppSide.Server;
     }
 
+    public override double ExecuteOrder()
+    {
+        return 0;
+    }
+
+    #region events
     private void PlayerDisconnect(IServerPlayer player)
     {
         #region restore_inventory
@@ -99,7 +130,7 @@ public class Initialization : ModSystem
                         // If not found alert the server the item has been corrupted
                         if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
                         {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED ON HOTBAR");
                             continue;
                         }
                         item.Itemstack = freezePlayers[player.PlayerName].hotbar[index];
@@ -112,9 +143,9 @@ public class Initialization : ModSystem
                     foreach (ItemSlot item in playerInventory)
                     {
                         // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        if (!freezePlayers[player.PlayerName].backpack.TryGetValue(index, out _))
                         {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED ON BACKPACK");
                             continue;
                         }
                         item.Itemstack = freezePlayers[player.PlayerName].backpack[index];
@@ -127,9 +158,9 @@ public class Initialization : ModSystem
                     foreach (ItemSlot item in playerInventory)
                     {
                         // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        if (!freezePlayers[player.PlayerName].ground.TryGetValue(index, out _))
                         {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED ON GROUND");
                             continue;
                         }
                         item.Itemstack = freezePlayers[player.PlayerName].ground[index];
@@ -142,9 +173,9 @@ public class Initialization : ModSystem
                     foreach (ItemSlot item in playerInventory)
                     {
                         // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        if (!freezePlayers[player.PlayerName].mouse.TryGetValue(index, out _))
                         {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED ON MOUSE");
                             continue;
                         }
                         item.Itemstack = freezePlayers[player.PlayerName].mouse[index];
@@ -157,9 +188,9 @@ public class Initialization : ModSystem
                     foreach (ItemSlot item in playerInventory)
                     {
                         // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        if (!freezePlayers[player.PlayerName].crafting.TryGetValue(index, out _))
                         {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CRAFTING");
                             continue;
                         }
                         item.Itemstack = freezePlayers[player.PlayerName].crafting[index];
@@ -172,9 +203,9 @@ public class Initialization : ModSystem
                     foreach (ItemSlot item in playerInventory)
                     {
                         // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        if (!freezePlayers[player.PlayerName].character.TryGetValue(index, out _))
                         {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CHARACTER");
                             continue;
                         }
                         item.Itemstack = freezePlayers[player.PlayerName].character[index];
@@ -197,9 +228,6 @@ public class Initialization : ModSystem
         if (!timeoutPlayers.TryGetValue(player.PlayerName, out _)) timeoutPlayers[player.PlayerName] = 0;
         timeoutPlayers[player.PlayerName] += 1;
         if (timeoutPlayers[player.PlayerName] >= 5) player.Disconnect("Too many attempts");
-
-        // After 25s checks if player is still unlogged then disconnects it
-        Task.Delay(25000).ContinueWith((_) => DisconnectPlayerIfIsUnlogged(player));
 
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
@@ -336,16 +364,23 @@ public class Initialization : ModSystem
                     }
                 }
             }
-            player.SendMessage(0, "To continue please login: /login password", EnumChatType.Notification);
         }
-        // If not ask for register
-        else
-        {
-            unloggedPlayers.Remove(player.PlayerName);
-            player.SendMessage(0, "This servers provides authentication system, consider using: /register password", EnumChatType.Notification);
-        }
+        // If player doesnt have account simple remove it from unlogged players
+        else unloggedPlayers.Remove(player.PlayerName);
     }
 
+    private void PlayerReady(IServerPlayer player)
+    {
+        // After 20s checks if player is still unlogged then disconnects it
+        Task.Delay(20000).ContinueWith((_) => DisconnectPlayerIfIsUnlogged(player));
+
+        // Check if player is already registered, if yes ask for login
+        if (unloggedPlayers.TryGetValue(player.PlayerName, out _)) player.SendMessage(0, "To continue please login: /login password", EnumChatType.Notification);
+        else player.SendMessage(0, "This server is powered by authentication, consider protecting your account ./register password", EnumChatType.Notification);
+    }
+    #endregion
+
+    #region commands
     private TextCommandResult RegisterPlayer(TextCommandCallingArgs args)
     {
         // Check if the password argument is valid
@@ -405,7 +440,7 @@ public class Initialization : ModSystem
                     // If not found alert the server the item has been corrupted
                     if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
                     {
-                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED HOTBAR");
                         continue;
                     }
                     item.Itemstack = freezePlayers[player.PlayerName].hotbar[index];
@@ -418,9 +453,9 @@ public class Initialization : ModSystem
                 foreach (ItemSlot item in playerInventory)
                 {
                     // If not found alert the server the item has been corrupted
-                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    if (!freezePlayers[player.PlayerName].backpack.TryGetValue(index, out _))
                     {
-                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED BACKPACK");
                         continue;
                     }
                     item.Itemstack = freezePlayers[player.PlayerName].backpack[index];
@@ -433,9 +468,9 @@ public class Initialization : ModSystem
                 foreach (ItemSlot item in playerInventory)
                 {
                     // If not found alert the server the item has been corrupted
-                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    if (!freezePlayers[player.PlayerName].ground.TryGetValue(index, out _))
                     {
-                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED GROUND");
                         continue;
                     }
                     item.Itemstack = freezePlayers[player.PlayerName].ground[index];
@@ -448,9 +483,9 @@ public class Initialization : ModSystem
                 foreach (ItemSlot item in playerInventory)
                 {
                     // If not found alert the server the item has been corrupted
-                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    if (!freezePlayers[player.PlayerName].mouse.TryGetValue(index, out _))
                     {
-                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED MOUSE");
                         continue;
                     }
                     item.Itemstack = freezePlayers[player.PlayerName].mouse[index];
@@ -463,9 +498,9 @@ public class Initialization : ModSystem
                 foreach (ItemSlot item in playerInventory)
                 {
                     // If not found alert the server the item has been corrupted
-                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    if (!freezePlayers[player.PlayerName].crafting.TryGetValue(index, out _))
                     {
-                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CRAFTING");
                         continue;
                     }
                     item.Itemstack = freezePlayers[player.PlayerName].crafting[index];
@@ -478,9 +513,9 @@ public class Initialization : ModSystem
                 foreach (ItemSlot item in playerInventory)
                 {
                     // If not found alert the server the item has been corrupted
-                    if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                    if (!freezePlayers[player.PlayerName].character.TryGetValue(index, out _))
                     {
-                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED");
+                        Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CHARACTER");
                         continue;
                     }
                     item.Itemstack = freezePlayers[player.PlayerName].character[index];
@@ -503,6 +538,49 @@ public class Initialization : ModSystem
         #endregion
     }
 
+    private TextCommandResult ChangePassword(TextCommandCallingArgs args)
+    {
+        IServerPlayer player = args.Caller.Player as IServerPlayer;
+        // Checking if player is not logged
+        if (unloggedPlayers.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("You cannot change the password without login in", "3");
+        // Check if the password argument is valid
+        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type a password", "0");
+
+        // Get all saved passwords in the server
+        Dictionary<string, string> savedPasswords = GetSavedPasswords();
+        // Check if player is not registered
+        if (!savedPasswords.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("This account is not registered yet, register using /register password", "2");
+
+        // Update password
+        savedPasswords[player.PlayerName] = args[0] as string;
+        // Save into the world database
+        api.WorldManager.SaveGame.StoreData("ServerAuth_Passwords", JsonSerializer.Serialize(savedPasswords));
+
+        return TextCommandResult.Success("Successfully changed your password", "4");
+    }
+
+    private TextCommandResult AdminChangePassword(TextCommandCallingArgs args)
+    {
+        // Check if the player name argument is valid
+        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type the player name", "5");
+        // Check if the password argument is valid
+        if (args.Parsers[1].IsMissing) return TextCommandResult.Success("Please type a password", "0");
+
+        // Get all saved passwords in the server
+        Dictionary<string, string> savedPasswords = GetSavedPasswords();
+        // Check if player is not registered
+        if (!savedPasswords.TryGetValue(args[0] as string, out _)) return TextCommandResult.Success($"Account {args[0]} doesn't exist", "2");
+
+        // Update password
+        savedPasswords[args[0] as string] = args[1] as string;
+        // Save into the world database
+        api.WorldManager.SaveGame.StoreData("ServerAuth_Passwords", JsonSerializer.Serialize(savedPasswords));
+
+        return TextCommandResult.Success($"Successfully changed the {args[0]} password", "6");
+    }
+    #endregion
+
+    #region utils
     private Dictionary<string, string> GetSavedPasswords()
     {
         byte[] dataBytes = api.WorldManager.SaveGame.GetData("ServerAuth_Passwords");
@@ -554,6 +632,7 @@ public class Initialization : ModSystem
             }
         }
     }
+    #endregion
 }
 
 public class Debug
