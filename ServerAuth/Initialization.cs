@@ -71,8 +71,8 @@ public class Initialization : ModSystem
         .WithDescription("Admin command to change password from a player")
         // Chat privilege
         .RequiresPrivilege(Privilege.root)
-        // Need a argument called password
-        .WithArgs(new StringArgParser("player", false), new StringArgParser("password", false))
+        // Need two arguments called player and password
+        .WithArgs(new StringArgParser("player password", false))
         // Function Handle
         .HandleWith(AdminChangePassword);
 
@@ -562,21 +562,25 @@ public class Initialization : ModSystem
     private TextCommandResult AdminChangePassword(TextCommandCallingArgs args)
     {
         // Check if the player name argument is valid
-        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type the player name", "5");
-        // Check if the password argument is valid
-        if (args.Parsers[1].IsMissing) return TextCommandResult.Success("Please type a password", "0");
+        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type the player name and password", "5");
+        // Get the player name and password
+        string[] namePass = args[0].ToString().Split(" "); // Player name = 0, password = 1
+        // Check if exist the password
+        if (namePass.Length == 1) return TextCommandResult.Success("Please type the account password", "7");
+        // Check if exist more than name and password
+        if (namePass.Length > 2) return TextCommandResult.Success("Please type only the account name and password", "7");
 
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
         // Check if player is not registered
-        if (!savedPasswords.TryGetValue(args[0] as string, out _)) return TextCommandResult.Success($"Account {args[0]} doesn't exist", "2");
+        if (!savedPasswords.TryGetValue(namePass[0], out _)) return TextCommandResult.Success($"Account {namePass[0]} doesn't exist", "2");
 
         // Update password
-        savedPasswords[args[0] as string] = args[1] as string;
+        savedPasswords[namePass[0]] = namePass[1];
         // Save into the world database
         api.WorldManager.SaveGame.StoreData("ServerAuth_Passwords", JsonSerializer.Serialize(savedPasswords));
 
-        return TextCommandResult.Success($"Successfully changed the {args[0]} password", "6");
+        return TextCommandResult.Success($"Successfully changed the {namePass[0]} password", "6");
     }
     #endregion
 
