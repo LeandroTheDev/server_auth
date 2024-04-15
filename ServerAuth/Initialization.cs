@@ -81,7 +81,7 @@ public class Initialization : ModSystem
         api.Event.PlayerJoin += PlayerJoin;
         api.Event.PlayerDisconnect += PlayerDisconnect;
         api.Event.PlayerNowPlaying += PlayerReady;
-        api.Event.RegisterGameTickListener(ReduceTimeoutPenalty, 60000);
+        api.Event.RegisterGameTickListener(ReduceTimeoutPenalty, Configuration.TimeToReducePlayerAttempts);
         api.Event.RegisterGameTickListener(FreezeUnloggedPlayers, 100);
 
         Debug.Log("Connections events registered");
@@ -107,6 +107,12 @@ public class Initialization : ModSystem
     public override double ExecuteOrder()
     {
         return 0;
+    }
+
+    public override void AssetsLoaded(ICoreAPI api)
+    {
+        base.AssetsLoaded(api);
+        Configuration.PopulateConfigurations(api);
     }
 
     #region events
@@ -227,12 +233,12 @@ public class Initialization : ModSystem
         //Timeout checker
         if (!timeoutPlayers.TryGetValue(player.PlayerName, out _)) timeoutPlayers[player.PlayerName] = 0;
         timeoutPlayers[player.PlayerName] += 1;
-        if (timeoutPlayers[player.PlayerName] >= 5) player.Disconnect("Too many attempts");
+        if (timeoutPlayers[player.PlayerName] >= Configuration.MaxAttemptsToBanPlayer) player.Disconnect(Configuration.ErrorTooManyAttempts);
 
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
         // Check if player is already registered, if yes ask for login
-        if (savedPasswords.TryGetValue(player.PlayerName, out _))
+        if (Configuration.FreezeNonRegisteredPlayer || savedPasswords.TryGetValue(player.PlayerName, out _))
         {
             // Create a new instance of freeze player
             freezePlayers[player.PlayerName] = new PlayerFreeze(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
@@ -372,11 +378,14 @@ public class Initialization : ModSystem
     private void PlayerReady(IServerPlayer player)
     {
         // After 20s checks if player is still unlogged then disconnects it
-        Task.Delay(20000).ContinueWith((_) => DisconnectPlayerIfIsUnlogged(player));
+        Task.Delay(Configuration.TimeUntilKickUnloggedPlayer).ContinueWith((_) => DisconnectPlayerIfIsUnlogged(player));
+
+        // Get all saved passwords in the server
+        Dictionary<string, string> savedPasswords = GetSavedPasswords();
 
         // Check if player is already registered, if yes ask for login
-        if (unloggedPlayers.TryGetValue(player.PlayerName, out _)) player.SendMessage(0, "To continue please login: /login password", EnumChatType.Notification);
-        else player.SendMessage(0, "This server is powered by authentication, consider protecting your account ./register password", EnumChatType.Notification);
+        if (savedPasswords.TryGetValue(player.PlayerName, out _)) player.SendMessage(0, Configuration.LoginMessage, EnumChatType.Notification);
+        else player.SendMessage(0, Configuration.RegisterMessage, EnumChatType.Notification);
     }
     #endregion
 
@@ -384,31 +393,150 @@ public class Initialization : ModSystem
     private TextCommandResult RegisterPlayer(TextCommandCallingArgs args)
     {
         // Check if the password argument is valid
-        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type a password", "0");
+        if (args.Parsers[0].IsMissing) return TextCommandResult.Success(Configuration.ErrorTypePassword, "0");
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
         // Check if player is already registered
-        if (savedPasswords.TryGetValue(args.Caller.Player.PlayerName, out _)) return TextCommandResult.Success("This account is already registered use /login password", "1");
+        if (savedPasswords.TryGetValue(args.Caller.Player.PlayerName, out _)) return TextCommandResult.Success(Configuration.ErrorAlreadyRegistered, "1");
 
         // Receive player password into saved passwords
         savedPasswords[args.Caller.Player.PlayerName] = args[0] as string;
         // Save into the world database
         api.WorldManager.SaveGame.StoreData("ServerAuth_Passwords", JsonSerializer.Serialize(savedPasswords));
 
-        return TextCommandResult.Success("Successfully registered the account, next time you logging you will need the password");
+        // Unfreze player if is freezed
+        if (Configuration.FreezeNonRegisteredPlayer)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            #region restore_inventory
+            foreach (IInventory playerInventory in player.InventoryManager.Inventories.Values)
+            {
+                // Get inventory type
+                string inventoryType = playerInventory.GetType().ToString();
+
+                // Stores all items inventory into player freeze variable
+                if (inventoryType.Contains("InventoryPlayerCreative")) continue;
+                else if (inventoryType.Contains("InventoryPlayerHotbar"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED HOTBAR");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].hotbar[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerBackPacks"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].backpack.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED BACKPACK");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].backpack[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerGround"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].ground.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED GROUND");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].ground[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryPlayerMouseCursor"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].mouse.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED MOUSE");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].mouse[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryCraftingGrid"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].crafting.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CRAFTING");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].crafting[index];
+                        index++;
+                    }
+                }
+                else if (inventoryType.Contains("InventoryCharacter"))
+                {
+                    int index = 0;
+                    foreach (ItemSlot item in playerInventory)
+                    {
+                        // If not found alert the server the item has been corrupted
+                        if (!freezePlayers[player.PlayerName].character.TryGetValue(index, out _))
+                        {
+                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CHARACTER");
+                            continue;
+                        }
+                        item.Itemstack = freezePlayers[player.PlayerName].character[index];
+                        index++;
+                    }
+                }
+            }
+            #endregion
+
+            #region cleaning
+            // Remove it from unlogged players
+            unloggedPlayers.Remove(args.Caller.Player.PlayerName);
+            freezePlayers.Remove(args.Caller.Player.PlayerName);
+
+            // Notify player the changes
+            player.BroadcastPlayerData(true);
+
+            #endregion
+            Debug.Log($"{args.Caller.Player.PlayerName} registered into server");
+            return TextCommandResult.Success(Configuration.SuccessRegisteredMessage);
+        }
+
+        Debug.Log($"{args.Caller.Player.PlayerName} registered into server");
+        return TextCommandResult.Success(Configuration.SuccessRegisteredMessage);
     }
 
     private TextCommandResult LoginPlayer(TextCommandCallingArgs args)
     {
         IServerPlayer player = args.Caller.Player as IServerPlayer;
         #region password_check
-        if (!unloggedPlayers.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("You are already logged", "0");
+        if (!unloggedPlayers.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success(Configuration.ErrorAlreadyLogged, "0");
         // Check if the password argument is valid
-        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type a password", "0");
+        if (args.Parsers[0].IsMissing) return TextCommandResult.Success(Configuration.ErrorTypePassword, "0");
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
         // Check if player is not registered
-        if (!savedPasswords.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("This account is not registered yet, register using /register password", "2");
+        if (!savedPasswords.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success(Configuration.ErrorNotRegistered, "2");
         // Password check
         if (!(args[0] as string == savedPasswords[player.PlayerName]))
         {
@@ -419,8 +547,8 @@ public class Initialization : ModSystem
             timeoutPlayers[player.PlayerName] += 1;
 
             // Disconnect the player if timeout exceed
-            if (timeoutPlayers[player.PlayerName] >= 5) player.Disconnect("Too many attempts");
-            return TextCommandResult.Success("Invalid password", "3");
+            if (timeoutPlayers[player.PlayerName] >= Configuration.MaxAttemptsToBanPlayer) player.Disconnect(Configuration.ErrorTooManyAttempts);
+            return TextCommandResult.Success(Configuration.ErrorInvalidPassword, "3");
         };
         #endregion
 
@@ -534,7 +662,7 @@ public class Initialization : ModSystem
         player.BroadcastPlayerData(true);
 
         Debug.Log($"{args.Caller.Player.PlayerName} logged into server");
-        return TextCommandResult.Success("Successfully logged");
+        return TextCommandResult.Success(Configuration.SuccessLoggedMessage);
         #endregion
     }
 
@@ -542,21 +670,21 @@ public class Initialization : ModSystem
     {
         IServerPlayer player = args.Caller.Player as IServerPlayer;
         // Checking if player is not logged
-        if (unloggedPlayers.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("You cannot change the password without login in", "3");
+        if (unloggedPlayers.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success(Configuration.ErrorChangePasswordWithoutLogin, "3");
         // Check if the password argument is valid
-        if (args.Parsers[0].IsMissing) return TextCommandResult.Success("Please type a password", "0");
+        if (args.Parsers[0].IsMissing) return TextCommandResult.Success(Configuration.ErrorTypePassword, "0");
 
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
         // Check if player is not registered
-        if (!savedPasswords.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success("This account is not registered yet, register using /register password", "2");
+        if (!savedPasswords.TryGetValue(player.PlayerName, out _)) return TextCommandResult.Success(Configuration.ErrorNotRegistered, "2");
 
         // Update password
         savedPasswords[player.PlayerName] = args[0] as string;
         // Save into the world database
         api.WorldManager.SaveGame.StoreData("ServerAuth_Passwords", JsonSerializer.Serialize(savedPasswords));
 
-        return TextCommandResult.Success("Successfully changed your password", "4");
+        return TextCommandResult.Success(Configuration.SuccessChangedPasswordMessage, "4");
     }
 
     private TextCommandResult AdminChangePassword(TextCommandCallingArgs args)

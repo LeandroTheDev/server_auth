@@ -6,33 +6,36 @@ Features:
 - Login account system ex: /login 123
 - Change password system ex: /changepassword 321
 - Admin change password system ex: /forcechangepassword test 321
+- Configuration files
 
 Player unlogged cannot:
 - Drop items
 - Execute commands
 - Break blocks
-- Place blocks
 - Get dropped items
 - Use inventory
-- Throw items
 - Deal damage
 - Receive damage
 - Lose saturation
 - Move
 
 ### Observations
-Players not registered will not count as unlogged player.
+Players not registered will not count as unlogged player. (Configurable)
 
-Players has 20 seconds to login, if player not logged will be automatically disconnected from the server.
+Players has 20 seconds to login, if player not logged will be automatically disconnected from the server. (Configurable)
 
-Too many wrongs password will kick user and ban for some seconds.
+Too many wrongs password will kick user and ban for some seconds. (Configurable)
 
-Entering too many times in server and not logging will ban the user for some seconds.
+Entering too many times in server and not logging will ban the user for some seconds. (Configurable)
 
 When a player enters in the server all the inventory is saved locally and the player inventory is clear, so
 the unlogged players will not have access to the inventory, when the player successfully login in, the inventory is restored.
 
 Unfurtunally you can view the players password in servers log if you have acess to it, this is because the native code logs all commands from players, you know how to disable it? feel free to pull request.
+
+The players password is saved based in the player name, if the player changes the name it will lost that password and will need to register again.
+
+Server Auth is completly server side so no needs to clients have this mod installed to play on the server.
 
 ### Considerations
 This mod change a lot of native code, and can break easily throught updates, please make a backup in your world before adding it.
@@ -40,6 +43,13 @@ This mod change a lot of native code, and can break easily throught updates, ple
 Performance can be a impacted on the server, because of authentication verification.
 
 To much unlogged players can cause performances leaks because of forcing stop moviment.
+
+### About Server Auth
+Server Auth is open source project and can easily be accessed on the github, all contents from this mod is completly free.
+
+If you want to contribute into the project you can access the project github and make your pull request.
+
+You are free to fork the project and make your own version of Server Auth, as long the name is changed
 
 ### Register
 ![image](https://github.com/LeandroTheDev/server_auth/assets/106118473/0091d753-6329-4d6a-b871-bbb3ef8f3a36) 

@@ -1,0 +1,18 @@
+{
+    "timeUntilKickUnloggedPlayer": 20000,
+    "freezeNonRegisteredPlayer": false,
+    "maxAttemptsToBanPlayer": 5,
+    "timeToReducePlayerAttemps": 60000,
+    "registerMessage": "This server is powered by authentication, consider protecting your account: /register password",
+    "loginMessage": "To continue please login: /login password",
+    "successRegisteredMessage": "Successfully registered the account, next time you login in you will need the password",
+    "successLoggedMessage": "Successfully logged",
+    "successChangedPasswordMessage": "Successfully changed your password",
+    "errorTypePassword": "Please type a password",
+    "errorAlreadyRegistered": "This account is already registered use /login password",
+    "errorAlreadyLogged": "You are already logged",
+    "errorNotRegistered": "This account is not registered yet, register using: /register password",
+    "errorInvalidPassword": "Invalid password",
+    "errorTooManyAttempts": "Too many attempts",
+    "errorChangePasswordWithoutLogin": "You cannot change the password without login in"
+}
