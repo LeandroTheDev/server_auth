@@ -14,6 +14,7 @@ public class Initialization : ModSystem
     public Dictionary<string, IServerPlayer> unloggedPlayers = [];
     private readonly Dictionary<string, int> timeoutPlayers = [];
     private readonly Dictionary<string, PlayerFreeze> freezePlayers = [];
+    private readonly Dictionary<string, bool> unregisteredFreezePlayers = [];
 
     private readonly OverwriteNetwork overwriteNetwork = new();
     public override void StartServerSide(ICoreServerAPI _api)
@@ -90,6 +91,8 @@ public class Initialization : ModSystem
     public override void Start(ICoreAPI api)
     {
         base.Start(api);
+        Debug.LoadLogger(api.Logger);
+        Debug.Log("Running on Version: 1.0.6");
         overwriteNetwork.OverwriteNativeFunctions(this);
     }
 
@@ -118,8 +121,11 @@ public class Initialization : ModSystem
     #region events
     private void PlayerDisconnect(IServerPlayer player)
     {
+        // Get all saved passwords in the server
+        Dictionary<string, string> savedPasswords = GetSavedPasswords();
         #region restore_inventory
-        if (freezePlayers.TryGetValue(player.PlayerName, out _))
+        // Finded the player freezed and the player is registered, we need to restore the inventory in this case
+        if (freezePlayers.TryGetValue(player.PlayerName, out _) && savedPasswords.TryGetValue(player.PlayerName, out _))
         {
             foreach (IInventory playerInventory in player.InventoryManager.Inventories.Values)
             {
@@ -237,8 +243,8 @@ public class Initialization : ModSystem
 
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
-        // Check if player is already registered, if yes ask for login
-        if (Configuration.FreezeNonRegisteredPlayer || savedPasswords.TryGetValue(player.PlayerName, out _))
+        // Check if player is already registered, if yes freeze the player
+        if (savedPasswords.TryGetValue(player.PlayerName, out _))
         {
             // Create a new instance of freeze player
             freezePlayers[player.PlayerName] = new PlayerFreeze(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
@@ -371,12 +377,33 @@ public class Initialization : ModSystem
                 }
             }
         }
+        // Check for the freeze unregistered players option
+        else if (Configuration.FreezeNonRegisteredPlayer)
+            // Create a new instance of freeze player for unregistered player
+            unregisteredFreezePlayers[player.PlayerName] = true;
         // If player doesnt have account simple remove it from unlogged players
         else unloggedPlayers.Remove(player.PlayerName);
     }
 
     private void PlayerReady(IServerPlayer player)
     {
+        // Check for unregistered players
+        if (unregisteredFreezePlayers.TryGetValue(player.PlayerName, out _))
+        {
+            // If player is unregistered we need to freeze completly now
+            // this is necessary because the first join in the world
+            // the player spawns in the edge of the world
+            // and the wait is necessary to player spawn in the world spawn
+
+            // Create a new instance of freeze player
+            Task.Delay(Configuration.TimeToFreezeUnregisteredPlayersAfterJoin).ContinueWith((_) =>
+            {
+                freezePlayers[player.PlayerName] = new PlayerFreeze(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
+            });
+
+            // Clear the unregistered list
+            unregisteredFreezePlayers.Remove(player.PlayerName);
+        }
         // After 20s checks if player is still unlogged then disconnects it
         Task.Delay(Configuration.TimeUntilKickUnloggedPlayer).ContinueWith((_) => DisconnectPlayerIfIsUnlogged(player));
 
@@ -408,106 +435,6 @@ public class Initialization : ModSystem
         if (Configuration.FreezeNonRegisteredPlayer)
         {
             IServerPlayer player = args.Caller.Player as IServerPlayer;
-            #region restore_inventory
-            foreach (IInventory playerInventory in player.InventoryManager.Inventories.Values)
-            {
-                // Get inventory type
-                string inventoryType = playerInventory.GetType().ToString();
-
-                // Stores all items inventory into player freeze variable
-                if (inventoryType.Contains("InventoryPlayerCreative")) continue;
-                else if (inventoryType.Contains("InventoryPlayerHotbar"))
-                {
-                    int index = 0;
-                    foreach (ItemSlot item in playerInventory)
-                    {
-                        // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].hotbar.TryGetValue(index, out _))
-                        {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED HOTBAR");
-                            continue;
-                        }
-                        item.Itemstack = freezePlayers[player.PlayerName].hotbar[index];
-                        index++;
-                    }
-                }
-                else if (inventoryType.Contains("InventoryPlayerBackPacks"))
-                {
-                    int index = 0;
-                    foreach (ItemSlot item in playerInventory)
-                    {
-                        // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].backpack.TryGetValue(index, out _))
-                        {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED BACKPACK");
-                            continue;
-                        }
-                        item.Itemstack = freezePlayers[player.PlayerName].backpack[index];
-                        index++;
-                    }
-                }
-                else if (inventoryType.Contains("InventoryPlayerGround"))
-                {
-                    int index = 0;
-                    foreach (ItemSlot item in playerInventory)
-                    {
-                        // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].ground.TryGetValue(index, out _))
-                        {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED GROUND");
-                            continue;
-                        }
-                        item.Itemstack = freezePlayers[player.PlayerName].ground[index];
-                        index++;
-                    }
-                }
-                else if (inventoryType.Contains("InventoryPlayerMouseCursor"))
-                {
-                    int index = 0;
-                    foreach (ItemSlot item in playerInventory)
-                    {
-                        // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].mouse.TryGetValue(index, out _))
-                        {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED MOUSE");
-                            continue;
-                        }
-                        item.Itemstack = freezePlayers[player.PlayerName].mouse[index];
-                        index++;
-                    }
-                }
-                else if (inventoryType.Contains("InventoryCraftingGrid"))
-                {
-                    int index = 0;
-                    foreach (ItemSlot item in playerInventory)
-                    {
-                        // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].crafting.TryGetValue(index, out _))
-                        {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CRAFTING");
-                            continue;
-                        }
-                        item.Itemstack = freezePlayers[player.PlayerName].crafting[index];
-                        index++;
-                    }
-                }
-                else if (inventoryType.Contains("InventoryCharacter"))
-                {
-                    int index = 0;
-                    foreach (ItemSlot item in playerInventory)
-                    {
-                        // If not found alert the server the item has been corrupted
-                        if (!freezePlayers[player.PlayerName].character.TryGetValue(index, out _))
-                        {
-                            Debug.Log($"ALERT {player.PlayerName} INVENTORY RESTORATION HAS BEEN CORRUPTED CHARACTER");
-                            continue;
-                        }
-                        item.Itemstack = freezePlayers[player.PlayerName].character[index];
-                        index++;
-                    }
-                }
-            }
-            #endregion
 
             #region cleaning
             // Remove it from unlogged players
@@ -769,8 +696,18 @@ public class Initialization : ModSystem
 
 public class Debug
 {
+    private static readonly OperatingSystem system = Environment.OSVersion;
+    static private ILogger loggerForNonTerminalUsers;
+
+    static public void LoadLogger(ILogger logger) => loggerForNonTerminalUsers = logger;
     static public void Log(string message)
     {
-        Console.WriteLine($"{DateTime.Now:d.M.yyyy HH:mm:ss} [ServerAuth] {message}");
+        // Check if is linux or other based system and if the terminal is active for the logs to be show
+        if ((system.Platform == PlatformID.Unix || system.Platform == PlatformID.Other) && Environment.UserInteractive)
+            // Based terminal users
+            Console.WriteLine($"{DateTime.Now:d.M.yyyy HH:mm:ss} [ServerAuth] {message}");
+        else
+            // Unbased non terminal users
+            loggerForNonTerminalUsers?.Log(EnumLogType.Notification, $"[ServerAuth] {message}");
     }
 }

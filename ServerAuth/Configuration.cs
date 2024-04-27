@@ -9,6 +9,7 @@ public static class Configuration
     private static bool freezeNonRegisteredPlayer = false;
     private static int maxAttemptsToBanPlayer = 5;
     private static int timeToReducePlayerAttempts = 60000;
+    private static int timeToFreezeUnregisteredPlayersAfterJoin = 1000;
     private static string registerMessage = "This server is powered by authentication, consider protecting your account: /register password";
     private static string loginMessage = "To continue please login: /login password";
     private static string successRegisteredMessage = "Successfully registered the account, next time you login in you will need the password";
@@ -25,6 +26,7 @@ public static class Configuration
     public static bool FreezeNonRegisteredPlayer => freezeNonRegisteredPlayer;
     public static int MaxAttemptsToBanPlayer => maxAttemptsToBanPlayer;
     public static int TimeToReducePlayerAttempts => timeToReducePlayerAttempts;
+    public static int TimeToFreezeUnregisteredPlayersAfterJoin => timeToFreezeUnregisteredPlayersAfterJoin;
     public static string RegisterMessage => registerMessage;
     public static string LoginMessage => loginMessage;
     public static string SuccessRegisteredMessage => successRegisteredMessage;
@@ -68,6 +70,13 @@ public static class Configuration
                 else if (value is not long) Debug.Log($"CONFIGURATION ERROR: timeToReducePlayerAttempts is not int is {value.GetType()}");
                 else timeToReducePlayerAttempts = (int)(long)value;
             else Debug.Log("CONFIGURATION ERROR: timeToReducePlayerAttempts not set");
+        }
+        { //timeToFreezeUnregisteredPlayersAfterJoin
+            if (baseConfigs.TryGetValue("timeToFreezeUnregisteredPlayersAfterJoin", out object value))
+                if (value is null) Debug.Log("CONFIGURATION ERROR: timeToFreezeUnregisteredPlayersAfterJoin is null");
+                else if (value is not long) Debug.Log($"CONFIGURATION ERROR: timeToFreezeUnregisteredPlayersAfterJoin is not int is {value.GetType()}");
+                else timeToFreezeUnregisteredPlayersAfterJoin = (int)(long)value;
+            else Debug.Log("CONFIGURATION ERROR: timeToFreezeUnregisteredPlayersAfterJoin not set");
         }
         { //registerMessage
             if (baseConfigs.TryGetValue("registerMessage", out object value))
