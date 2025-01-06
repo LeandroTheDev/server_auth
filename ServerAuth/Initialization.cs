@@ -751,9 +751,12 @@ public class Initialization : ModSystem
 
     private void PlayerRespawnUnsecurePlayerName(IServerPlayer player)
     {
-        freezePlayers[player.PlayerName].X = player.Entity.Pos.X;
-        freezePlayers[player.PlayerName].Y = player.Entity.Pos.Y;
-        freezePlayers[player.PlayerName].Z = player.Entity.Pos.Z;
+        if (freezePlayers.TryGetValue(player.PlayerName, out _))
+        {
+            freezePlayers[player.PlayerName].X = player.Entity.Pos.X;
+            freezePlayers[player.PlayerName].Y = player.Entity.Pos.Y;
+            freezePlayers[player.PlayerName].Z = player.Entity.Pos.Z;
+        }
 
         Task.Delay(Configuration.ReviveFreezeDelay)
             .ContinueWith((_) => deadUnloggedPlayers.Remove(player.PlayerName));
@@ -761,9 +764,12 @@ public class Initialization : ModSystem
 
     private void PlayerRespawnSecurePlayerUID(IServerPlayer player)
     {
-        freezePlayers[player.PlayerUID].X = player.Entity.Pos.X;
-        freezePlayers[player.PlayerUID].Y = player.Entity.Pos.Y;
-        freezePlayers[player.PlayerUID].Z = player.Entity.Pos.Z;
+        if (freezePlayers.TryGetValue(player.PlayerUID, out _))
+        {
+            freezePlayers[player.PlayerUID].X = player.Entity.Pos.X;
+            freezePlayers[player.PlayerUID].Y = player.Entity.Pos.Y;
+            freezePlayers[player.PlayerUID].Z = player.Entity.Pos.Z;
+        }
 
         Task.Delay(Configuration.ReviveFreezeDelay)
             .ContinueWith((_) => deadUnloggedPlayers.Remove(player.PlayerUID));
