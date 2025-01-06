@@ -6,7 +6,9 @@ namespace ServerAuth;
 public static class Configuration
 {
     private static int timeUntilKickUnloggedPlayer = 20000;
+    private static bool uidAuthentication = true;
     private static bool freezeNonRegisteredPlayer = false;
+    private static int reviveFreezeDelay = 1000;
     private static int maxAttemptsToBanPlayer = 5;
     private static int timeToReducePlayerAttempts = 60000;
     private static int timeToFreezeUnregisteredPlayersAfterJoin = 1000;
@@ -22,8 +24,11 @@ public static class Configuration
     private static string errorInvalidPassword = "Invalid password";
     private static string errorTooManyAttempts = "Too many attempts";
     private static string errorChangePasswordWithoutLogin = "You cannot change the password without login in";
+    private static string errorRequestLogin = "You need to login in first";
     public static int TimeUntilKickUnloggedPlayer => timeUntilKickUnloggedPlayer;
+    public static bool UIDAuthentication => uidAuthentication;
     public static bool FreezeNonRegisteredPlayer => freezeNonRegisteredPlayer;
+    public static int ReviveFreezeDelay => reviveFreezeDelay;
     public static int MaxAttemptsToBanPlayer => maxAttemptsToBanPlayer;
     public static int TimeToReducePlayerAttempts => timeToReducePlayerAttempts;
     public static int TimeToFreezeUnregisteredPlayersAfterJoin => timeToFreezeUnregisteredPlayersAfterJoin;
@@ -39,6 +44,7 @@ public static class Configuration
     public static string ErrorInvalidPassword => errorInvalidPassword;
     public static string ErrorTooManyAttempts => errorTooManyAttempts;
     public static string ErrorChangePasswordWithoutLogin => errorChangePasswordWithoutLogin;
+    public static string ErrorRequestLogin => errorRequestLogin;
 
     public static void PopulateConfigurations(ICoreAPI api)
     {
@@ -50,12 +56,26 @@ public static class Configuration
                 else timeUntilKickUnloggedPlayer = (int)(long)value;
             else Debug.Log("CONFIGURATION ERROR: timeUntilKickUnloggedPlayer not set");
         }
+        { //uidAuthentication
+            if (baseConfigs.TryGetValue("uidAuthentication", out object value))
+                if (value is null) Debug.Log("CONFIGURATION ERROR: uidAuthentication is null");
+                else if (value is not bool) Debug.Log($"CONFIGURATION ERROR: uidAuthentication is not boolean is {value.GetType()}");
+                else uidAuthentication = (bool)value;
+            else Debug.Log("CONFIGURATION ERROR: uidAuthentication not set");
+        }
         { //freezeNonRegisteredPlayer
             if (baseConfigs.TryGetValue("freezeNonRegisteredPlayer", out object value))
                 if (value is null) Debug.Log("CONFIGURATION ERROR: freezeNonRegisteredPlayer is null");
                 else if (value is not bool) Debug.Log($"CONFIGURATION ERROR: freezeNonRegisteredPlayer is not boolean is {value.GetType()}");
                 else freezeNonRegisteredPlayer = (bool)value;
             else Debug.Log("CONFIGURATION ERROR: freezeNonRegisteredPlayer not set");
+        }
+        { //reviveFreezeDelay
+            if (baseConfigs.TryGetValue("reviveFreezeDelay", out object value))
+                if (value is null) Debug.Log("CONFIGURATION ERROR: reviveFreezeDelay is null");
+                else if (value is not long) Debug.Log($"CONFIGURATION ERROR: reviveFreezeDelay is not int is {value.GetType()}");
+                else reviveFreezeDelay = (int)(long)value;
+            else Debug.Log("CONFIGURATION ERROR: reviveFreezeDelay not set");
         }
         { //maxAttemptsToBanPlayer
             if (baseConfigs.TryGetValue("maxAttemptsToBanPlayer", out object value))
@@ -161,6 +181,13 @@ public static class Configuration
                 else if (value is not string) Debug.Log($"CONFIGURATION ERROR: errorChangePasswordWithoutLogin is not string is {value.GetType()}");
                 else errorChangePasswordWithoutLogin = (string)value;
             else Debug.Log("CONFIGURATION ERROR: errorChangePasswordWithoutLogin not set");
+        }
+        { //errorRequestLogin
+            if (baseConfigs.TryGetValue("errorRequestLogin", out object value))
+                if (value is null) Debug.Log("CONFIGURATION ERROR: errorRequestLogin is null");
+                else if (value is not string) Debug.Log($"CONFIGURATION ERROR: errorRequestLogin is not string is {value.GetType()}");
+                else errorRequestLogin = (string)value;
+            else Debug.Log("CONFIGURATION ERROR: errorRequestLogin not set");
         }
 
         Debug.Log("Authentication configurations set");

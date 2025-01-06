@@ -11,8 +11,8 @@ using Vintagestory.GameContent;
 namespace ServerAuth;
 
 #pragma warning disable IDE0060
-[HarmonyPatchCategory("serverauth_network")]
-public class OverwriteNetwork
+[HarmonyPatchCategory("serverauth_network_unsecure_unsecure")]
+public class OverwriteNetworkUnsecure
 {
     static private Initialization instance;
     public Harmony overwriter;
@@ -20,15 +20,15 @@ public class OverwriteNetwork
     public void OverwriteNativeFunctions(Initialization init)
     {
         instance = init;
-        if (!Harmony.HasAnyPatches("serverauth_network"))
+        if (!Harmony.HasAnyPatches("serverauth_network_unsecure"))
         {
-            overwriter = new Harmony("serverauth_network");
-            overwriter.PatchCategory("serverauth_network");
-            Debug.Log("Network system has been overwrited");
+            overwriter = new Harmony("serverauth_network_unsecure");
+            overwriter.PatchCategory("serverauth_network_unsecure");
+            Debug.Log("UNSECURE Network system has been overwrited");
         }
         else
         {
-            Debug.Log("FATAL ERROR: Cannot overwrite network system, did exist a mod with serverauth_network harmony?");
+            Debug.Log("FATAL ERROR: Cannot overwrite network system, did exist a mod with serverauth_network_unsecure harmony?");
         }
     }
 
@@ -38,7 +38,7 @@ public class OverwriteNetwork
     public static bool CanPlayerAccess(InventoryBasePlayer __instance, IPlayer player, EntityPos position)
     {
         // If player is unlogged cannot access inventory: get dropped items or drop items
-        if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
+        if (instance.unloggedPlayers.TryGetValue(player.PlayerName, out _)) return false;
         else return true;
     }
 
@@ -48,7 +48,7 @@ public class OverwriteNetwork
     public static bool Execute(string commandName, IServerPlayer player, int groupId, string args, Action<TextCommandResult> onCommandComplete)
     {
         if (commandName == "login" || commandName == "register") return true;
-        if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _))
+        if (instance.unloggedPlayers.TryGetValue(player.PlayerName, out _))
         {
             player.SendMessage(0, Configuration.ErrorRequestLogin, EnumChatType.Notification);
             return false;
@@ -62,7 +62,7 @@ public class OverwriteNetwork
     // public static bool CanPlaceBlock(Block __instance, IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel, ref string failureCode)
     // {
     //     // If player is unlogged cannot place blocks
-    //     if (instance.unloggedPlayers.TryGetValue(byPlayer.PlayerUID, out _))
+    //     if (instance.unloggedPlayers.TryGetValue(byPlayer.PlayerName, out _))
     //     {
     //         failureCode = "claimed";
     //         return false;
@@ -76,10 +76,10 @@ public class OverwriteNetwork
     public static bool OnBlockBroken(Block __instance, IWorldAccessor world, BlockPos pos, IPlayer byPlayer, float dropQuantityMultiplier = 1f)
     {
         // In cases that block broken is not broken by a player
-        if (byPlayer == null) return true;
+        if(byPlayer == null) return true;
 
         // If player is unlogged cannot break blocks
-        if (instance.unloggedPlayers.TryGetValue(byPlayer.PlayerUID, out _))
+        if (instance.unloggedPlayers.TryGetValue(byPlayer.PlayerName, out _))
         {
             IServerPlayer player = byPlayer as IServerPlayer;
             // This will replace the block the player breaked,
@@ -88,7 +88,7 @@ public class OverwriteNetwork
             // if hes breaked so he cannot pass
             Task.Delay(100).ContinueWith((_) =>
             {
-                Debug.Log($"{byPlayer.PlayerUID} tried to break a block in {pos.X} {pos.Y} {pos.Z} but hes is not logged");
+                Debug.Log($"{byPlayer.PlayerName} tried to break a block in {pos.X} {pos.Y} {pos.Z} but hes is not logged");
                 __instance.DoPlaceBlock(world, player, new BlockSelection(pos, BlockFacing.SOUTH, __instance), new ItemStack(__instance, 1));
             });
             return false;
@@ -103,7 +103,7 @@ public class OverwriteNetwork
     // public static bool OnHeldInteractStartSpear(ItemSpear __instance, ItemSlot itemslot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
     // {
     //     // If player is unlogged cannot throw spears
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
+    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerName, out _)) return false;
     //     else return true;
     // }
 
@@ -113,7 +113,7 @@ public class OverwriteNetwork
     // public static bool OnHeldInteractStartBow(ItemBow __instance, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
     // {
     //     // If player is unlogged cannot use bows
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
+    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerName, out _)) return false;
     //     else return true;
     // }
 
@@ -123,7 +123,7 @@ public class OverwriteNetwork
     // public static bool OnHeldInteractStartStone(ItemStone __instance, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
     // {
     //     // If player is unlogged cannot throw stones
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
+    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerName, out _)) return false;
     //     else return true;
     // }
 
@@ -139,10 +139,10 @@ public class OverwriteNetwork
         else if (__instance is EntityPlayer) player = __instance as EntityPlayer;
         else return true;
 
-        if (player.Player.PlayerUID == null) return true;
+        if (player.Player.PlayerName == null) return true;
 
         // If player is unlogged cannot receive or deal damage
-        if (instance.unloggedPlayers.TryGetValue(player.Player.PlayerUID, out _)) return false;
+        if (instance.unloggedPlayers.TryGetValue(player.Player.PlayerName, out _)) return false;
         else return true;
     }
 
@@ -152,7 +152,7 @@ public class OverwriteNetwork
     // public static bool DamageItem(CollectibleObject __instance, IWorldAccessor world, Entity byEntity, ItemSlot itemslot, int amount = 1)
     // {
     //     // If player is unlogged cannot lose item durability
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
+    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerName, out _)) return false;
     //     else return true;
     // }
 

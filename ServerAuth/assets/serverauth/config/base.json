@@ -1,6 +1,8 @@
 {
     "timeUntilKickUnloggedPlayer": 20000,
+    "uidAuthentication": true,
     "freezeNonRegisteredPlayer": false,
+    "reviveFreezeDelay": 1000,
     "maxAttemptsToBanPlayer": 5,
     "timeToReducePlayerAttempts": 60000,
     "timeToFreezeUnregisteredPlayersAfterJoin": 1000,
@@ -15,5 +17,6 @@
     "errorNotRegistered": "This account is not registered yet, register using: /register password",
     "errorInvalidPassword": "Invalid password",
     "errorTooManyAttempts": "Too many attempts",
-    "errorChangePasswordWithoutLogin": "You cannot change the password without login in"
+    "errorChangePasswordWithoutLogin": "You cannot change the password without login in",
+    "errorRequestLogin": "You need to login in first"
 }
