@@ -46,27 +46,19 @@ Performance can be a impacted on the server, because of authentication verificat
 
 To much unlogged players can cause performances leaks because of forcing stop moviment.
 
-### About Server Auth
+# About Server Auth
 Server Auth is open source project and can easily be accessed on the github, all contents from this mod is completly free.
 
 If you want to contribute into the project you can access the project github and make your pull request.
 
 You are free to fork the project and make your own version of Server Auth, as long the name is changed
 
-### Building
-Learn more about vintage story modding in [Linux](https://github.com/LeandroTheDev/arch_linux/wiki/Games#vintage-story-modding) or [Windows](https://wiki.vintagestory.at/index.php/Modding:Setting_up_your_Development_Environment)
+# Building
+- Install .NET in your system, open terminal type: ``dotnet new install VintageStory.Mod.Templates``
+- Create a template with the name ``ServerAuth``: ``dotnet new vsmod --AddSolutionFile -o ServerAuth``
+- [Clone the repository](https://github.com/LeandroTheDev/server_auth/archive/refs/heads/main.zip)
+- Copy the ``CakeBuild`` and ``build.ps1`` or ``build.sh`` and paste inside the repository
 
-Create a template with name ServerAuth, and paste all contents from this project in there
-
-> Linux
-
-Make a symbolic link for fast tests
-- ln -s /path/to/project/Releases/serverauth/* /path/to/game/Mods/ServerAuth/
-
-Execute the comamnd ./build.sh, consider downloading dotnet 7 in our linux distribution if you dont have it.
-
-> Windows
-
-Just open the visual studio with ServerAuth.sln
+Now you can build using the ``build.ps1`` or ``build.sh`` file
 
 FTM License
