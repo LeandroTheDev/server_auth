@@ -14,21 +14,13 @@ namespace ServerAuth;
 
 public class Initialization : ModSystem
 {
-    #region serveronly
     ICoreServerAPI api;
-    IServerNetworkChannel serverChannel;
 
-    internal static readonly Dictionary<string, RSA> playersKeys = [];
     public readonly Dictionary<string, IServerPlayer> unloggedPlayers = [];
     private readonly Dictionary<string, int> timeoutPlayers = [];
     private readonly Dictionary<string, PlayerFreeze> freezePlayers = [];
     private readonly Dictionary<string, bool> unregisteredFreezePlayers = [];
     private readonly Dictionary<string, bool> deadUnloggedPlayers = [];
-    #endregion
-
-    #region clientonly
-    internal static RSA publicKey = null;
-    #endregion
 
     private readonly OverwriteNetwork overwriteNetwork = new();
     public override void StartServerSide(ICoreServerAPI _api)
@@ -101,25 +93,6 @@ public class Initialization : ModSystem
         api.Event.RegisterGameTickListener(FreezeUnloggedPlayers, 100);
 
         Debug.Log("Connections events registered");
-
-        serverChannel = api.Network
-                .RegisterChannel("ServerAuthenticationPubKey")
-                .RegisterMessageType(typeof(RSAPubkeyResponse));
-    }
-
-    public override void StartClientSide(ICoreClientAPI api)
-    {
-        base.StartClientSide(api);
-        api.Network.GetChannel("ServerAuthenticationPubKey")
-            .SetMessageHandler<RSAPubkeyResponse>(OnRSAReceived);
-    }
-
-    private void OnRSAReceived(RSAPubkeyResponse packet)
-    {
-        byte[] pubKeyBytes = Convert.FromBase64String(packet.pubkey);
-        using RSA rsa = RSA.Create();
-        rsa.ImportRSAPublicKey(pubKeyBytes, out int bytesRead);
-        publicKey = rsa;
     }
 
     public override void Start(ICoreAPI api)
@@ -263,8 +236,7 @@ public class Initialization : ModSystem
         #endregion
         unloggedPlayers.Remove(player.PlayerUID);
         freezePlayers.Remove(player.PlayerUID);
-        deadUnloggedPlayers.Remove(player.PlayerUID);
-        playersKeys.Remove(player.PlayerUID);
+        deadUnloggedPlayers.Remove(player.PlayerUID);        
     }
 
     private void PlayerJoinSecurePlayerUID(IServerPlayer player)
@@ -433,11 +405,6 @@ public class Initialization : ModSystem
             return sb.ToString();
         }
 
-
-        RSA rsaKeys = RSA.Create(2048);
-        serverChannel.SendPacket<RSAPubkeyResponse>(new() { pubkey = exportPublicKey(rsaKeys) }, player);
-        playersKeys.Add(player.PlayerUID, rsaKeys);
-
         // Check if player is dead
         if (!player.Entity.Alive)
         {
@@ -503,14 +470,7 @@ public class Initialization : ModSystem
         // Check if player is already registered
         if (savedPasswords.TryGetValue(args.Caller.Player.PlayerUID, out _)) return TextCommandResult.Success(Configuration.ErrorAlreadyRegistered, "1");
 
-        string typedPassword;
-        if (playersKeys.TryGetValue(player.PlayerUID, out RSA rsaKeys))
-        {
-            byte[] encryptedArgs = Convert.FromBase64String(args[0] as string);
-            byte[] decryptedBytes = rsaKeys.Decrypt(encryptedArgs, RSAEncryptionPadding.OaepSHA256);
-            typedPassword = Encoding.UTF8.GetString(decryptedBytes);
-        }
-        else return TextCommandResult.Success(Configuration.ErrorInvalidPassword, "3");
+        string typedPassword = args[0] as string;
 
         // Receive player password into saved passwords
         savedPasswords[args.Caller.Player.PlayerUID] = HashPassword(typedPassword);
@@ -545,14 +505,7 @@ public class Initialization : ModSystem
         // Check if the password argument is valid
         if (args.Parsers[0].IsMissing) return TextCommandResult.Success(Configuration.ErrorTypePassword, "0");
 
-        string typedPassword;
-        if (playersKeys.TryGetValue(player.PlayerUID, out RSA rsaKeys))
-        {
-            byte[] encryptedArgs = Convert.FromBase64String(args[0] as string);
-            byte[] decryptedBytes = rsaKeys.Decrypt(encryptedArgs, RSAEncryptionPadding.OaepSHA256);
-            typedPassword = Encoding.UTF8.GetString(decryptedBytes);
-        }
-        else return TextCommandResult.Success(Configuration.ErrorInvalidPassword, "3");
+        string typedPassword = args[0] as string;
 
         // Get all saved passwords in the server
         Dictionary<string, string> savedPasswords = GetSavedPasswords();
@@ -700,14 +653,7 @@ public class Initialization : ModSystem
         // Check if player is not registered
         if (!savedPasswords.TryGetValue(player.PlayerUID, out _)) return TextCommandResult.Success(Configuration.ErrorNotRegistered, "2");
 
-        string typedPassword;
-        if (playersKeys.TryGetValue(player.PlayerUID, out RSA rsaKeys))
-        {
-            byte[] encryptedArgs = Convert.FromBase64String(args[0] as string);
-            byte[] decryptedBytes = rsaKeys.Decrypt(encryptedArgs, RSAEncryptionPadding.OaepSHA256);
-            typedPassword = Encoding.UTF8.GetString(decryptedBytes);
-        }
-        else return TextCommandResult.Success(Configuration.ErrorInvalidPassword, "3");
+        string typedPassword = args[0] as string;
 
         // Update password
         savedPasswords[player.PlayerUID] = HashPassword(typedPassword);

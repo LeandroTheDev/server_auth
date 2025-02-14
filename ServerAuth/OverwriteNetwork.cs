@@ -63,23 +63,6 @@ public class OverwriteNetwork
         return true;
     }
 
-    // Overwrite the client command system
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(ChatCommandApi), "Execute", [typeof(string), typeof(IClientPlayer), typeof(int), typeof(string), typeof(Action<TextCommandResult>)])]
-    public static void ExecuteClient(string commandName, IClientPlayer player, int groupId, ref string args, Action<TextCommandResult> onCommandComplete)
-    {
-        // Encrypting passwords
-        if (commandName == "login" || commandName == "register" || commandName == "changepassword")
-        {
-            if (Initialization.publicKey != null)
-            {
-                byte[] argsBytes = Encoding.UTF8.GetBytes(args);
-                byte[] encryptedArgs = Initialization.publicKey.Encrypt(argsBytes, RSAEncryptionPadding.OaepSHA256);
-                args = Convert.ToBase64String(encryptedArgs);
-            }
-        }
-    }
-
     // Overwrite the block break system
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Block), "OnBlockBroken")]
