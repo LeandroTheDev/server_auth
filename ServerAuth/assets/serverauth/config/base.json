@@ -1,4 +1,5 @@
 {
+    "rsaKeySize": 2048,
     "timeUntilKickUnloggedPlayer": 20000,
     "uidAuthentication": true,
     "freezeNonRegisteredPlayer": false,

@@ -5,8 +5,8 @@ namespace ServerAuth;
 
 public static class Configuration
 {
+    private static int rsaKeySize = 2048;
     private static int timeUntilKickUnloggedPlayer = 20000;
-    private static bool uidAuthentication = true;
     private static bool freezeNonRegisteredPlayer = false;
     private static int reviveFreezeDelay = 1000;
     private static int maxAttemptsToBanPlayer = 5;
@@ -25,8 +25,8 @@ public static class Configuration
     private static string errorTooManyAttempts = "Too many attempts";
     private static string errorChangePasswordWithoutLogin = "You cannot change the password without login in";
     private static string errorRequestLogin = "You need to login in first";
+    public static int RSAKeySize => rsaKeySize;
     public static int TimeUntilKickUnloggedPlayer => timeUntilKickUnloggedPlayer;
-    public static bool UIDAuthentication => uidAuthentication;
     public static bool FreezeNonRegisteredPlayer => freezeNonRegisteredPlayer;
     public static int ReviveFreezeDelay => reviveFreezeDelay;
     public static int MaxAttemptsToBanPlayer => maxAttemptsToBanPlayer;
@@ -49,19 +49,19 @@ public static class Configuration
     public static void PopulateConfigurations(ICoreAPI api)
     {
         Dictionary<string, object> baseConfigs = api.Assets.Get(new AssetLocation("serverauth:config/base.json")).ToObject<Dictionary<string, object>>();
+        { //rsaKeySize
+            if (baseConfigs.TryGetValue("rsaKeySize", out object value))
+                if (value is null) Debug.Log("CONFIGURATION ERROR: rsaKeySize is null");
+                else if (value is not long) Debug.Log($"CONFIGURATION ERROR: rsaKeySize is not int is {value.GetType()}");
+                else rsaKeySize = (int)(long)value;
+            else Debug.Log("CONFIGURATION ERROR: rsaKeySize not set");
+        }
         { //timeUntilKickUnloggedPlayer
             if (baseConfigs.TryGetValue("timeUntilKickUnloggedPlayer", out object value))
                 if (value is null) Debug.Log("CONFIGURATION ERROR: timeUntilKickUnloggedPlayer is null");
                 else if (value is not long) Debug.Log($"CONFIGURATION ERROR: timeUntilKickUnloggedPlayer is not int is {value.GetType()}");
                 else timeUntilKickUnloggedPlayer = (int)(long)value;
             else Debug.Log("CONFIGURATION ERROR: timeUntilKickUnloggedPlayer not set");
-        }
-        { //uidAuthentication
-            if (baseConfigs.TryGetValue("uidAuthentication", out object value))
-                if (value is null) Debug.Log("CONFIGURATION ERROR: uidAuthentication is null");
-                else if (value is not bool) Debug.Log($"CONFIGURATION ERROR: uidAuthentication is not boolean is {value.GetType()}");
-                else uidAuthentication = (bool)value;
-            else Debug.Log("CONFIGURATION ERROR: uidAuthentication not set");
         }
         { //freezeNonRegisteredPlayer
             if (baseConfigs.TryGetValue("freezeNonRegisteredPlayer", out object value))

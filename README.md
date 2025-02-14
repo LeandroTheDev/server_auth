@@ -1,12 +1,23 @@
 # Server Auth
 Increase the security for your server by adding a new account register and login on player connections, totally server side,
 
+# Version to choose
+| Game Version         | Mod Version          |
+|----------------------|----------------------|
+| 1.x.x                | RSA Encryption (Both)|
+| 1.x.x-rc             | Simple (Server Only) |
+
+### warning
+In the last version the configuration ``uidAuthentication`` is removed, if this is used as false in previous versions, updating the mod will make all players need to register again!!
+
 Features:
 - Register account system ex: /register 123
 - Login account system ex: /login 123
 - Change password system ex: /changepassword 321
 - Admin change password system ex: /forcechangepassword test 321
 - Configuration files
+- RSA Encryption for passwords
+- Passwords saved is hashed using SHA256
 
 Player unlogged cannot:
 - Drop items

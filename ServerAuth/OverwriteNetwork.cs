@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
@@ -42,33 +45,40 @@ public class OverwriteNetwork
         else return true;
     }
 
-    // Overwrite the command system
+    // Overwrite the server command system
     [HarmonyPrefix]
     [HarmonyPatch(typeof(ChatCommandApi), "Execute", [typeof(string), typeof(IServerPlayer), typeof(int), typeof(string), typeof(Action<TextCommandResult>)])]
-    public static bool Execute(string commandName, IServerPlayer player, int groupId, string args, Action<TextCommandResult> onCommandComplete)
+    public static bool ExecuteServer(string commandName, IServerPlayer player, int groupId, ref string args, Action<TextCommandResult> onCommandComplete)
     {
-        if (commandName == "login" || commandName == "register") return true;
+        // Login or register command doesn't need to be logged
+        if (commandName == "login" || commandName == "register")
+            return true;
+
+        // Check if player is logged
         if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _))
         {
             player.SendMessage(0, Configuration.ErrorRequestLogin, EnumChatType.Notification);
             return false;
         }
-        else return true;
+        return true;
     }
 
-    // // Overwrite the block place system not necessary because player inventory now is cleared
-    // [HarmonyPrefix]
-    // [HarmonyPatch(typeof(Block), "CanPlaceBlock")]
-    // public static bool CanPlaceBlock(Block __instance, IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel, ref string failureCode)
-    // {
-    //     // If player is unlogged cannot place blocks
-    //     if (instance.unloggedPlayers.TryGetValue(byPlayer.PlayerUID, out _))
-    //     {
-    //         failureCode = "claimed";
-    //         return false;
-    //     }
-    //     else return true;
-    // }
+    // Overwrite the client command system
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(ChatCommandApi), "Execute", [typeof(string), typeof(IClientPlayer), typeof(int), typeof(string), typeof(Action<TextCommandResult>)])]
+    public static void ExecuteClient(string commandName, IClientPlayer player, int groupId, ref string args, Action<TextCommandResult> onCommandComplete)
+    {
+        // Encrypting passwords
+        if (commandName == "login" || commandName == "register" || commandName == "changepassword")
+        {
+            if (Initialization.publicKey != null)
+            {
+                byte[] argsBytes = Encoding.UTF8.GetBytes(args);
+                byte[] encryptedArgs = Initialization.publicKey.Encrypt(argsBytes, RSAEncryptionPadding.OaepSHA256);
+                args = Convert.ToBase64String(encryptedArgs);
+            }
+        }
+    }
 
     // Overwrite the block break system
     [HarmonyPrefix]
@@ -96,37 +106,6 @@ public class OverwriteNetwork
         else return true;
     }
 
-
-    // // Overwrite the spear throw not necessary because player inventory now is cleared
-    // [HarmonyPrefix]
-    // [HarmonyPatch(typeof(ItemSpear), "OnHeldInteractStart")]
-    // public static bool OnHeldInteractStartSpear(ItemSpear __instance, ItemSlot itemslot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
-    // {
-    //     // If player is unlogged cannot throw spears
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
-    //     else return true;
-    // }
-
-    // // Overwrite the bow throw not necessary because player inventory now is cleared
-    // [HarmonyPrefix]
-    // [HarmonyPatch(typeof(ItemBow), "OnHeldInteractStart")]
-    // public static bool OnHeldInteractStartBow(ItemBow __instance, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
-    // {
-    //     // If player is unlogged cannot use bows
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
-    //     else return true;
-    // }
-
-    // // Overwrite the stone throw not necessary because player inventory now is cleared
-    // [HarmonyPrefix]
-    // [HarmonyPatch(typeof(ItemStone), "OnHeldInteractStart")]
-    // public static bool OnHeldInteractStartStone(ItemStone __instance, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
-    // {
-    //     // If player is unlogged cannot throw stones
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
-    //     else return true;
-    // }
-
     // Overwrite the damage
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Entity), "ReceiveDamage")]
@@ -145,16 +124,6 @@ public class OverwriteNetwork
         if (instance.unloggedPlayers.TryGetValue(player.Player.PlayerUID, out _)) return false;
         else return true;
     }
-
-    // // Overwrite the durability not necessary because player inventory now is cleared
-    // [HarmonyPrefix]
-    // [HarmonyPatch(typeof(CollectibleObject), "DamageItem")]
-    // public static bool DamageItem(CollectibleObject __instance, IWorldAccessor world, Entity byEntity, ItemSlot itemslot, int amount = 1)
-    // {
-    //     // If player is unlogged cannot lose item durability
-    //     if (instance.unloggedPlayers.TryGetValue(player.PlayerUID, out _)) return false;
-    //     else return true;
-    // }
 
     // Overwrite the saturation
     [HarmonyPrefix]
