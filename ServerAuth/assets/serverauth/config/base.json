@@ -1,7 +1,6 @@
 {
     "rsaKeySize": 2048,
     "timeUntilKickUnloggedPlayer": 20000,
-    "uidAuthentication": true,
     "freezeNonRegisteredPlayer": false,
     "reviveFreezeDelay": 1000,
     "maxAttemptsToBanPlayer": 5,

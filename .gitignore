@@ -4,5 +4,4 @@ Releases
 ServerAuth/bin
 ServerAuth/obj
 build.ps1
-build.sh
 ServerAuth.sln

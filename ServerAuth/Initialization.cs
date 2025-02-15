@@ -128,7 +128,7 @@ public class Initialization : ModSystem
     public override void Dispose()
     {
         base.Dispose();
-        overwriteNetwork.overwriter.UnpatchAll();
+        overwriteNetwork.overwriter?.UnpatchAll();
     }
 
     public override double ExecuteOrder() => 0;
