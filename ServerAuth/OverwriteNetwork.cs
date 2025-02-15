@@ -3,11 +3,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
-using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.Client.NoObf;
 using Vintagestory.Common;
 using Vintagestory.GameContent;
 
@@ -65,17 +65,20 @@ public class OverwriteNetwork
 
     // Overwrite the client command system
     [HarmonyPrefix]
-    [HarmonyPatch(typeof(ChatCommandApi), "Execute", [typeof(string), typeof(IClientPlayer), typeof(int), typeof(string), typeof(Action<TextCommandResult>)])]
-    public static void ExecuteClient(string commandName, IClientPlayer player, int groupId, ref string args, Action<TextCommandResult> onCommandComplete)
+    [HarmonyPatch(typeof(ClientEventAPI), "TriggerSendChatMessage")]
+    public static void ExecuteClient(int groupId, ref string message, ref EnumHandling handling)
     {
         // Encrypting passwords
-        if (commandName == "login" || commandName == "register" || commandName == "changepassword")
+        if (message.StartsWith("/login") || message.StartsWith("/register") || message.StartsWith("/changepassword"))
         {
             if (Initialization.publicKey != null)
             {
-                byte[] argsBytes = Encoding.UTF8.GetBytes(args);
+                string[] args = message.Split(" ");
+                byte[] argsBytes = Encoding.UTF8.GetBytes(args[1]);
                 byte[] encryptedArgs = Initialization.publicKey.Encrypt(argsBytes, RSAEncryptionPadding.OaepSHA256);
-                args = Convert.ToBase64String(encryptedArgs);
+                args[1] = Convert.ToBase64String(encryptedArgs);
+                // Command / Space / Password encrypted
+                message = args[0] + " " + args[1];
             }
         }
     }

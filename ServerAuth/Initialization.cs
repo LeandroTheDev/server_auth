@@ -110,16 +110,11 @@ public class Initialization : ModSystem
     public override void StartClientSide(ICoreClientAPI api)
     {
         base.StartClientSide(api);
-        api.Network.GetChannel("ServerAuthenticationPubKey")
+        api.Network.RegisterChannel("ServerAuthenticationPubKey")
+            .RegisterMessageType<RSAPubkeyResponse>()
             .SetMessageHandler<RSAPubkeyResponse>(OnRSAReceived);
-    }
 
-    private void OnRSAReceived(RSAPubkeyResponse packet)
-    {
-        byte[] pubKeyBytes = Convert.FromBase64String(packet.pubkey);
-        using RSA rsa = RSA.Create();
-        rsa.ImportRSAPublicKey(pubKeyBytes, out int bytesRead);
-        publicKey = rsa;
+        Debug.Log("RSA Channel Created");
     }
 
     public override void Start(ICoreAPI api)
@@ -136,15 +131,7 @@ public class Initialization : ModSystem
         overwriteNetwork.overwriter.UnpatchAll();
     }
 
-    public override bool ShouldLoad(EnumAppSide forSide)
-    {
-        return forSide == EnumAppSide.Server;
-    }
-
-    public override double ExecuteOrder()
-    {
-        return 0;
-    }
+    public override double ExecuteOrder() => 0;
 
     public override void AssetsLoaded(ICoreAPI api)
     {
@@ -153,6 +140,14 @@ public class Initialization : ModSystem
     }
 
     #region events
+    private void OnRSAReceived(RSAPubkeyResponse packet)
+    {
+        RSA rsa = RSA.Create();
+        rsa.ImportRSAPublicKey(packet.pubkey, out int _);
+        publicKey = rsa;
+        Debug.Log("RSA Public key received with success");
+    }
+
     private void PlayerDisconnectSecurePlayerUID(IServerPlayer player)
     {
         // Get all saved passwords in the server
@@ -423,19 +418,8 @@ public class Initialization : ModSystem
 
     private void PlayerReadySecurePlayerUID(IServerPlayer player)
     {
-        static string exportPublicKey(RSA rsa)
-        {
-            var parameters = rsa.ExportParameters(false);
-            StringBuilder sb = new();
-            sb.AppendLine("-----BEGIN PUBLIC KEY-----");
-            sb.AppendLine(Convert.ToBase64String(parameters.Modulus));
-            sb.AppendLine("-----END PUBLIC KEY-----");
-            return sb.ToString();
-        }
-
-
         RSA rsaKeys = RSA.Create(2048);
-        serverChannel.SendPacket<RSAPubkeyResponse>(new() { pubkey = exportPublicKey(rsaKeys) }, player);
+        serverChannel.SendPacket<RSAPubkeyResponse>(new() { pubkey = rsaKeys.ExportRSAPublicKey() }, player);
         playersKeys.Add(player.PlayerUID, rsaKeys);
 
         // Check if player is dead
@@ -836,19 +820,13 @@ public class Initialization : ModSystem
 
 public class Debug
 {
-    private static readonly OperatingSystem system = Environment.OSVersion;
     static private ILogger loggerForNonTerminalUsers;
 
     static public void LoadLogger(ILogger logger) => loggerForNonTerminalUsers = logger;
     static public void Log(string message)
     {
-        // Check if is linux or other based system and if the terminal is active for the logs to be show
-        if ((system.Platform == PlatformID.Unix || system.Platform == PlatformID.Other) && Environment.UserInteractive)
-            // Based terminal users
-            Console.WriteLine($"{DateTime.Now:d.M.yyyy HH:mm:ss} [ServerAuth] {message}");
-        else
-            // Unbased non terminal users
-            loggerForNonTerminalUsers?.Log(EnumLogType.Notification, $"[ServerAuth] {message}");
+        // Unbased non terminal users
+        loggerForNonTerminalUsers?.Log(EnumLogType.Notification, $"[ServerAuth] {message}");
     }
 }
 
@@ -856,5 +834,5 @@ public class Debug
 public class RSAPubkeyResponse
 {
     [ProtoMember(1)]
-    public string pubkey;
+    public byte[] pubkey;
 }
