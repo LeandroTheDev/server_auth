@@ -395,16 +395,6 @@ public class Initialization : ModSystem
 
     private void PlayerReadySecurePlayerUID(IServerPlayer player)
     {
-        static string exportPublicKey(RSA rsa)
-        {
-            var parameters = rsa.ExportParameters(false);
-            StringBuilder sb = new();
-            sb.AppendLine("-----BEGIN PUBLIC KEY-----");
-            sb.AppendLine(Convert.ToBase64String(parameters.Modulus));
-            sb.AppendLine("-----END PUBLIC KEY-----");
-            return sb.ToString();
-        }
-
         // Check if player is dead
         if (!player.Entity.Alive)
         {
